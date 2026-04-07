@@ -14,7 +14,7 @@ export default function ItemStorage() {
   const [itemToUnlock, setItemToUnlock] = useState(null)
   const [unlockedItems, setUnlockedItems] = useState(new Set())
   const [editingItem, setEditingItem] = useState(null)
-  const [formData, setFormData] = useState({ title: '', content: '', password: '' })
+  const [formData, setFormData] = useState({ title: '', contentRows: [''], password: '' })
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null)
   const [errorMessage, setErrorMessage] = useState(null)
 
@@ -67,16 +67,17 @@ export default function ItemStorage() {
 
   function openCreateModal() {
     setEditingItem(null)
-    setFormData({ title: '', content: '', password: '' })
+    setFormData({ title: '', contentRows: [''], password: '' })
     setIsModalOpen(true)
   }
 
   function openEditModal(item, e) {
     e.stopPropagation()
     setEditingItem(item)
+    const rows = item.content_rows || (item.content ? [item.content] : [''])
     setFormData({
       title: item.title,
-      content: item.content,
+      contentRows: rows,
       password: item.password || ''
     })
     setIsModalOpen(true)
@@ -87,7 +88,7 @@ export default function ItemStorage() {
     
     const itemData = {
       title: formData.title,
-      content: formData.content,
+      content_rows: formData.contentRows.filter(row => row.trim() !== ''),
       password: formData.password || null
     }
 
@@ -211,7 +212,9 @@ export default function ItemStorage() {
         {selectedItem ? (
           <div style={styles.contentBox}>
             <h2 style={styles.contentTitle}>{selectedItem.title}</h2>
-            <div style={styles.contentText}>{selectedItem.content}</div>
+            {(selectedItem.content_rows || (selectedItem.content ? [selectedItem.content] : [])).map((row, index) => (
+              <div key={index} style={styles.contentRow}>{row}</div>
+            ))}
           </div>
         ) : (
           <div style={styles.emptyContent}>
@@ -239,14 +242,41 @@ export default function ItemStorage() {
                 />
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Content</label>
-                <textarea
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  required
-                  rows={6}
-                  style={styles.textarea}
-                />
+                <label style={styles.label}>Content Rows</label>
+                {formData.contentRows.map((row, index) => (
+                  <div key={index} style={styles.rowContainer}>
+                    <textarea
+                      value={row}
+                      onChange={(e) => {
+                        const newRows = [...formData.contentRows]
+                        newRows[index] = e.target.value
+                        setFormData({ ...formData, contentRows: newRows })
+                      }}
+                      rows={3}
+                      style={styles.textarea}
+                      placeholder={`Row ${index + 1}`}
+                    />
+                    {formData.contentRows.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newRows = formData.contentRows.filter((_, i) => i !== index)
+                          setFormData({ ...formData, contentRows: newRows })
+                        }}
+                        style={styles.removeRowButton}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, contentRows: [...formData.contentRows, ''] })}
+                  style={styles.addRowButton}
+                >
+                  + Add Row
+                </button>
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>
@@ -466,6 +496,46 @@ const styles = {
     lineHeight: 1.7,
     color: '#444',
     whiteSpace: 'pre-wrap',
+  },
+  contentRow: {
+    fontSize: '16px',
+    lineHeight: 1.7,
+    color: '#444',
+    marginBottom: '16px',
+    padding: '16px',
+    backgroundColor: '#f9f9f9',
+    borderRadius: '8px',
+    border: '1px solid #e0e0e0',
+  },
+  rowContainer: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'flex-start',
+    marginBottom: '8px',
+  },
+  removeRowButton: {
+    backgroundColor: '#ffebee',
+    color: '#c62828',
+    border: 'none',
+    width: '32px',
+    height: '32px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    flexShrink: 0,
+    marginTop: '4px',
+  },
+  addRowButton: {
+    backgroundColor: '#e3f2fd',
+    color: '#1976d2',
+    border: '1px dashed #1976d2',
+    padding: '10px 16px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 500,
+    width: '100%',
+    marginTop: '4px',
   },
   emptyContent: {
     display: 'flex',
