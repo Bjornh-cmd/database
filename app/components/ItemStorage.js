@@ -677,7 +677,7 @@ const styles = {
     borderTop: '2px solid #4CAF50',
     padding: '12px 20px',
     display: 'flex',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     gap: '12px',
     fontSize: '13px',
