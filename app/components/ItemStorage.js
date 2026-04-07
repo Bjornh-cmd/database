@@ -212,7 +212,9 @@ export default function ItemStorage() {
         {selectedItem ? (
           <div style={styles.contentBox}>
             <h2 style={styles.contentTitle}>{selectedItem.title}</h2>
-            <div style={styles.contentText}>{selectedItem.content || (selectedItem.content_rows ? selectedItem.content_rows.join('\n\n') : '')}</div>
+            {(selectedItem.content || '').split('\n').filter(line => line.trim() !== '').map((line, index) => (
+              <div key={index} style={styles.contentLine}>{line}</div>
+            ))}
           </div>
         ) : (
           <div style={styles.emptyContent}>
@@ -467,6 +469,16 @@ const styles = {
     lineHeight: 1.7,
     color: '#444',
     whiteSpace: 'pre-wrap',
+  },
+  contentLine: {
+    fontSize: '16px',
+    lineHeight: 1.6,
+    color: '#444',
+    marginBottom: '12px',
+    padding: '12px 16px',
+    backgroundColor: '#f5f5f5',
+    borderRadius: '8px',
+    borderLeft: '4px solid #4CAF50',
   },
   emptyContent: {
     display: 'flex',
