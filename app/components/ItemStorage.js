@@ -246,6 +246,41 @@ export default function ItemStorage() {
                 <textarea
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const textarea = e.target
+                      const cursorPos = textarea.selectionStart
+                      const text = formData.content
+                      const lines = text.substring(0, cursorPos).split('\n')
+                      const currentLine = lines[lines.length - 1]
+                      
+                      // Check for list patterns: -, *, 1., 2., etc.
+                      const listMatch = currentLine.match(/^(\s*)([-*]|\d+\.)\s/)
+                      if (listMatch) {
+                        e.preventDefault()
+                        const indent = listMatch[1]
+                        const prefix = listMatch[2]
+                        let newPrefix = prefix
+                        
+                        // If numbered list, increment the number
+                        if (/^\d+\.$/.test(prefix)) {
+                          newPrefix = (parseInt(prefix) + 1) + '.'
+                        }
+                        
+                        const beforeCursor = text.substring(0, cursorPos)
+                        const afterCursor = text.substring(cursorPos)
+                        const newText = beforeCursor + '\n' + indent + newPrefix + ' ' + afterCursor
+                        
+                        setFormData({ ...formData, content: newText })
+                        
+                        // Set cursor position after the new prefix
+                        setTimeout(() => {
+                          const newCursorPos = cursorPos + 1 + indent.length + newPrefix.length + 1
+                          textarea.setSelectionRange(newCursorPos, newCursorPos)
+                        }, 0)
+                      }
+                    }
+                  }}
                   required
                   rows={6}
                   style={styles.textarea}
