@@ -17,10 +17,28 @@ export default function ItemStorage() {
   const [formData, setFormData] = useState({ title: '', content: '', password: '' })
   const [deleteConfirmItem, setDeleteConfirmItem] = useState(null)
   const [errorMessage, setErrorMessage] = useState(null)
+  const [lastCommit, setLastCommit] = useState(null)
 
   useEffect(() => {
     fetchItems()
+    fetchLastCommit()
   }, [])
+
+  async function fetchLastCommit() {
+    try {
+      const response = await fetch('https://api.github.com/repos/Bjornh-cmd/database/commits/master')
+      if (response.ok) {
+        const data = await response.json()
+        setLastCommit({
+          date: new Date(data.commit.committer.date).toLocaleString('nl-NL'),
+          message: data.commit.message,
+          url: data.html_url
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching commit:', error)
+    }
+  }
 
   async function fetchItems() {
     const { data, error } = await supabase
@@ -374,6 +392,14 @@ export default function ItemStorage() {
           </div>
         </div>
       )}
+      {lastCommit && (
+        <div style={styles.footer}>
+          <span style={styles.footerText}>Laatste wijziging: {lastCommit.date}</span>
+          <a href={lastCommit.url} target="_blank" rel="noopener noreferrer" style={styles.footerLink}>
+            {lastCommit.message}
+          </a>
+        </div>
+      )}
     </div>
   )
 }
@@ -390,7 +416,7 @@ const styles = {
     borderRight: '1px solid #e0e0e0',
     display: 'flex',
     flexDirection: 'column',
-    padding: '20px',
+    padding: '20px 20px 50px 20px',
   },
   header: {
     display: 'flex',
@@ -485,7 +511,7 @@ const styles = {
   },
   content: {
     flex: 1,
-    padding: '40px',
+    padding: '40px 40px 60px 40px',
     overflowY: 'auto',
     backgroundColor: '#fff',
   },
@@ -641,5 +667,32 @@ const styles = {
     marginBottom: '16px',
     fontSize: '13px',
     border: '1px solid #ef5350',
+  },
+  footer: {
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#f5f5f5',
+    borderTop: '1px solid #e0e0e0',
+    padding: '10px 20px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '12px',
+    fontSize: '13px',
+    color: '#666',
+    zIndex: 100,
+  },
+  footerText: {
+    color: '#888',
+  },
+  footerLink: {
+    color: '#1976d2',
+    textDecoration: 'none',
+    maxWidth: '300px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
 }
