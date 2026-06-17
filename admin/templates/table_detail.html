@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}{{ table.name }} — DB Admin{% endblock %}
+
+{% set active = 'dashboard' %}
+
+{% block content %}
+
+<div class="page-header">
+
+  <div>
+
+    <h1><code>{{ table.name }}</code></h1>
+
+    <p class="muted">Database: {{ table.database.name }}</p>
+
+  </div>
+
+  <a href="{{ base_path }}/databases/{{ table.database.id }}" class="btn btn-ghost">Terug</a>
+
+</div>
+
+
+
+<div class="tabs">
+
+  <button type="button" class="tab active" data-tab="schema">Schema &amp; data</button>
+
+  <button type="button" class="tab" data-tab="commands">API commands</button>
+
+</div>
+
+
+
+<div id="tab-schema" class="tab-panel active">
+
+  <div class="info-card">
+
+    <h2>Schema</h2>
+
+    <table class="data-table">
+
+      <thead>
+
+        <tr>
+
+          <th>Kolom</th>
+
+          <th>Type</th>
+
+          <th>Nullable</th>
+
+          <th>Primary Key</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for col in table.columns %}
+
+        <tr>
+
+          <td><code>{{ col.name }}</code></td>
+
+          <td>{{ col.type }}</td>
+
+          <td>{{ 'Ja' if col.nullable else 'Nee' }}</td>
+
+          <td>{{ 'Ja' if col.is_primary_key else 'Nee' }}</td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+
+
+  <h2>Data preview</h2>
+
+  <div id="rows-loading" class="muted">Laden...</div>
+
+  <div id="rows-container"></div>
+
+</div>
+
+
+
+<div id="tab-commands" class="tab-panel">
+
+  <div class="info-card">
+
+    <h2>CREATE TABLE</h2>
+
+    <pre class="code-block copy-target" id="create-sql">{{ examples.create_sql }}</pre>
+
+    <button type="button" class="btn btn-sm btn-ghost copy-btn" data-target="create-sql">Kopieer SQL</button>
+
+
+
+    <h2>API commands</h2>
+
+    <p class="muted small">Credentials zitten in de API URL — geen Bearer token nodig.</p>
+
+
+
+    <div class="command-grid">
+
+      <div>
+
+        <span class="cmd-label">Lijst rijen</span>
+
+        <pre class="code-block copy-target" id="cmd-list">{{ examples.list }}</pre>
+
+      </div>
+
+      <div>
+
+        <span class="cmd-label">GET één rij</span>
+
+        <pre class="code-block copy-target" id="cmd-get">{{ examples.get_one }}</pre>
+
+      </div>
+
+      <div>
+
+        <span class="cmd-label">POST insert</span>
+
+        <pre class="code-block copy-target" id="cmd-post">{{ examples.create }}</pre>
+
+      </div>
+
+      <div>
+
+        <span class="cmd-label">PATCH update</span>
+
+        <pre class="code-block copy-target" id="cmd-patch">{{ examples.update }}</pre>
+
+      </div>
+
+      <div>
+
+        <span class="cmd-label">DELETE</span>
+
+        <pre class="code-block copy-target" id="cmd-delete">{{ examples.delete }}</pre>
+
+      </div>
+
+    </div>
+
+
+
+    <h3>Insert body (JSON)</h3>
+
+    <pre class="code-block copy-target" id="insert-body">{{ examples.insert_body }}</pre>
+
+    <button type="button" class="btn btn-sm btn-ghost copy-btn" data-target="insert-body">Kopieer JSON</button>
+
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+
+document.querySelectorAll('.tab').forEach(tab => {
+
+  tab.addEventListener('click', () => {
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+    tab.classList.add('active');
+
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+
+  });
+
+});
+
+
+
+document.querySelectorAll('.copy-btn').forEach(btn => {
+
+  btn.addEventListener('click', () => {
+
+    const el = document.getElementById(btn.dataset.target);
+
+    navigator.clipboard.writeText(el.textContent);
+
+    showToast('Gekopieerd naar klembord', 'success');
+
+  });
+
+});
+
+
+
+const dbBase = window.DB_BASE || '/db';
+
+async function loadRows() {
+
+  const res = await fetch(`${dbBase}/api/tables/{{ table.id }}/rows?limit=50`);
+
+  const loading = document.getElementById('rows-loading');
+
+  const container = document.getElementById('rows-container');
+
+  loading.classList.add('hidden');
+
+
+
+  if (!res.ok) {
+
+    container.innerHTML = '<p class="error">Kon data niet laden</p>';
+
+    return;
+
+  }
+
+
+
+  const data = await res.json();
+
+  if (!data.rows.length) {
+
+    container.innerHTML = '<div class="empty-state"><p>Nog geen rijen in deze tabel.</p></div>';
+
+    return;
+
+  }
+
+
+
+  const cols = Object.keys(data.rows[0]);
+
+  let html = `<p class="muted small">${data.total} rij(en) totaal — toont ${data.rows.length}</p>`;
+
+  html += '<table class="data-table"><thead><tr>';
+
+  cols.forEach(c => { html += `<th>${c}</th>`; });
+
+  html += '</tr></thead><tbody>';
+
+  data.rows.forEach(row => {
+
+    html += '<tr>';
+
+    cols.forEach(c => {
+
+      const val = row[c];
+
+      html += `<td>${val === null ? '<span class="muted">null</span>' : (typeof val === 'object' ? JSON.stringify(val) : val)}</td>`;
+
+    });
+
+    html += '</tr>';
+
+  });
+
+  html += '</tbody></table>';
+
+  container.innerHTML = html;
+
+}
+
+
+
+loadRows();
+
+</script>
+
+{% endblock %}
+
