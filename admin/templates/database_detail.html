@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}{{ database.name }} — DB Admin{% endblock %}
+{% set active = 'dashboard' %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ database.name }}</h1>
+    <p class="muted"><code>{{ database.slug }}</code></p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ base_path }}/databases/{{ database.id }}/tables/new" class="btn btn-primary">Nieuwe tabel</a>
+    <button type="button" id="delete-db-btn" class="btn btn-danger">Verwijderen</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button type="button" class="tab active" data-tab="settings">Instellingen</button>
+  <button type="button" class="tab" data-tab="integration">Integratie prompt</button>
+  <button type="button" class="tab" data-tab="tables">Tabellen &amp; commands</button>
+</div>
+
+<div id="tab-settings" class="tab-panel active">
+  <div class="grid-2">
+    <div class="info-card">
+      <h2>Client connectie</h2>
+      <dl class="detail-list">
+        <dt>IP / Host</dt>
+        <dd><code>{{ host }}</code></dd>
+        <dt>API URL</dt>
+        <dd><code>{{ api_url }}</code></dd>
+        <dt>Lokaal</dt>
+        <dd><code>{{ localhost_api_url }}</code></dd>
+        <dt>Username</dt>
+        <dd><code>{{ database.username }}</code></dd>
+        <dt>Password</dt>
+        <dd>
+          {% if client_password %}
+          <code id="password-display">{{ client_password }}</code>
+          {% else %}
+          <span class="muted">Niet opgeslagen — stel wachtwoord opnieuw in rechts</span>
+          {% endif %}
+        </dd>
+        <dt>API formaat</dt>
+        <dd><code>{{ api_url }}/&lt;table&gt;</code></dd>
+      </dl>
+      <h3 class="section-sub">Environment variables</h3>
+      <pre class="code-block copy-target" id="env-block">DB_API_URL={{ api_url }}
+DB_USERNAME={{ database.username }}
+DB_PASSWORD={% if client_password %}{{ client_password }}{% else %}&lt;stel wachtwoord in&gt;{% endif %}</pre>
+      <button type="button" class="btn btn-sm btn-ghost copy-btn" data-target="env-block">Kopieer .env</button>
+    </div>
+    <div class="info-card">
+      <h2>Instellingen</h2>
+      <form id="update-db-form">
+        <label>
+          Naam
+          <input type="text" name="name" value="{{ database.name }}" required>
+        </label>
+        <label>
+          Client wachtwoord
+          <input type="text" name="password" minlength="4" placeholder="{% if client_password %}Laat leeg om niet te wijzigen{% else %}Vul wachtwoord in{% endif %}">
+          {% if not client_password %}
+          <span class="hint">Vul in en sla op — daarna is de integratie prompt compleet</span>
+          {% endif %}
+        </label>
+        <p id="update-error" class="error hidden"></p>
+        <button type="submit" class="btn btn-primary btn-sm">Opslaan</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="tab-integration" class="tab-panel">
+  <div class="info-card">
+    <div class="card-header-row">
+      <div>
+        <h2>Integratie prompt</h2>
+        {% if prompt_ready %}
+        <p class="muted small">Kant-en-klaar — kopieer en plak direct in Cursor/ChatGPT. Alles is al ingevuld.</p>
+        {% else %}
+        <p class="error small">Stel eerst het client wachtwoord in via tab Instellingen, daarna is deze prompt compleet.</p>
+        {% endif %}
+      </div>
+      <button type="button" class="btn btn-primary" id="copy-prompt-btn" {% if not prompt_ready %}disabled{% endif %}>Kopieer prompt</button>
+    </div>
+    <textarea id="integration-prompt" class="prompt-textarea" rows="28" readonly>{{ integration_prompt }}</textarea>
+  </div>
+</div>
+
+<div id="tab-tables" class="tab-panel">
+  <h2>Tabellen</h2>
+  {% if table_examples %}
+  {% for item in table_examples %}
+  <div class="info-card table-command-card">
+    <div class="card-header-row">
+      <h2><code>{{ item.table.name }}</code></h2>
+      <div class="header-actions">
+        <a href="{{ base_path }}/tables/{{ item.table.id }}" class="btn btn-sm">Data bekijken</a>
+        <button type="button" class="btn btn-sm btn-danger delete-table-btn" data-id="{{ item.table.id }}" data-name="{{ item.table.name }}">Verwijder</button>
+      </div>
+    </div>
+    <p class="muted small">
+      {% for col in item.table.columns %}
+      <span class="tag">{{ col.name }} ({{ col.type }}){% if col.is_primary_key %} PK{% endif %}</span>
+      {% endfor %}
+    </p>
+    <h3>CREATE TABLE</h3>
+    <pre class="code-block copy-target" id="create-{{ item.table.id }}">{{ item.examples.create_sql }}</pre>
+    <button type="button" class="btn btn-sm btn-ghost copy-btn" data-target="create-{{ item.table.id }}">Kopieer SQL</button>
+    <h3>API commands</h3>
+    <div class="command-grid">
+      <div>
+        <span class="cmd-label">Lijst</span>
+        <pre class="code-block copy-target" id="list-{{ item.table.id }}">{{ item.examples.list }}</pre>
+      </div>
+      <div>
+        <span class="cmd-label">GET één rij</span>
+        <pre class="code-block copy-target" id="get-{{ item.table.id }}">{{ item.examples.get_one }}</pre>
+      </div>
+      <div>
+        <span class="cmd-label">POST insert</span>
+        <pre class="code-block copy-target" id="post-{{ item.table.id }}">{{ item.examples.create }}</pre>
+      </div>
+      <div>
+        <span class="cmd-label">PATCH update</span>
+        <pre class="code-block copy-target" id="patch-{{ item.table.id }}">{{ item.examples.update }}</pre>
+      </div>
+      <div>
+        <span class="cmd-label">DELETE</span>
+        <pre class="code-block copy-target" id="del-{{ item.table.id }}">{{ item.examples.delete }}</pre>
+      </div>
+    </div>
+    <button type="button" class="btn btn-sm btn-ghost copy-btn" data-target="post-{{ item.table.id }}">Kopieer POST</button>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="empty-state">
+    <p>Nog geen tabellen. Maak een tabel aan om CREATE commands en API voorbeelden te zien.</p>
+    <a href="{{ base_path }}/databases/{{ database.id }}/tables/new" class="btn btn-primary">Nieuwe tabel</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const dbId = {{ database.id }};
+const dbBase = window.DB_BASE || '/db';
+const dbSlug = {{ database.slug | tojson }};
+const dbName = {{ database.name | tojson }};
+const promptEl = document.getElementById('integration-prompt');
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('copy-prompt-btn').addEventListener('click', () => {
+  navigator.clipboard.writeText(promptEl.value);
+  showToast('Prompt gekopieerd naar klembord', 'success');
+});
+
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const el = document.getElementById(btn.dataset.target);
+    navigator.clipboard.writeText(el.textContent);
+    showToast('Gekopieerd naar klembord', 'success');
+  });
+});
+
+document.getElementById('update-db-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const errorEl = document.getElementById('update-error');
+  errorEl.classList.add('hidden');
+  const body = { name: form.name.value };
+  if (form.password.value) body.password = form.password.value;
+  const res = await fetch(`${dbBase}/api/databases/${dbId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.ok) window.location.reload();
+  else {
+    const err = await res.json();
+    errorEl.textContent = err.detail || 'Opslaan mislukt';
+    errorEl.classList.remove('hidden');
+  }
+});
+
+document.getElementById('delete-db-btn').addEventListener('click', async () => {
+  const ok = await showVerifyDelete({
+    title: 'Database verwijderen',
+    message: `Je staat op het punt om "${dbName}" permanent te verwijderen. Alle tabellen en data gaan verloren. Dit kan niet ongedaan worden gemaakt.`,
+    verifyLabel: `Typ <strong>${dbSlug}</strong> om te bevestigen:`,
+    verifyPlaceholder: dbSlug,
+    verifyValue: dbSlug,
+    confirmText: 'Database verwijderen',
+  });
+  if (!ok) return;
+  const res = await fetch(`${dbBase}/api/databases/${dbId}`, { method: 'DELETE' });
+  if (res.ok) {
+    showToast('Database verwijderd', 'success');
+    setTimeout(() => { window.location.href = `${dbBase}/`; }, 400);
+  } else {
+    showToast('Verwijderen mislukt', 'error');
+  }
+});
+
+document.querySelectorAll('.delete-table-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const tableName = btn.dataset.name;
+    const ok = await showVerifyDelete({
+      title: 'Tabel verwijderen',
+      message: `De tabel "${tableName}" en alle data erin worden permanent verwijderd.`,
+      verifyLabel: `Typ <strong>${tableName}</strong> om te bevestigen:`,
+      verifyPlaceholder: tableName,
+      verifyValue: tableName,
+      confirmText: 'Tabel verwijderen',
+    });
+    if (!ok) return;
+    const res = await fetch(`${dbBase}/api/tables/${btn.dataset.id}`, { method: 'DELETE' });
+    if (res.ok) window.location.reload();
+    else showToast('Verwijderen mislukt', 'error');
+  });
+});
+</script>
+{% endblock %}

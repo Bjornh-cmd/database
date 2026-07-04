@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — DB Admin{% endblock %}
+{% set active = 'dashboard' %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="muted">Beheer je multi-tenant databases</p>
+  </div>
+  <a href="{{ base_path }}/databases/new" class="btn btn-primary">＋ Nieuwe database</a>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <span class="stat-label">Databases</span>
+    <span class="stat-value">{{ databases|length }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">API host</span>
+    <span class="stat-value stat-mono">{{ host }}</span>
+  </div>
+  <div class="stat-card stat-card-wide">
+    <span class="stat-label">Database API</span>
+    <span class="stat-value stat-mono stat-sm">{{ api_url }}</span>
+  </div>
+</div>
+
+<div class="info-card highlight-card">
+  <h2>Client connectie</h2>
+  <p class="muted">Alle databases gebruiken hetzelfde IP/adres, elk met eigen login.</p>
+  <div class="url-box">
+    <code>{{ api_url }}</code>
+  </div>
+  <p class="muted small">API: <code>{{ api_url }}/&lt;table&gt;</code> — credentials in URL-pad</p>
+  <p class="muted small">Lokaal: <code>{{ localhost_api_url }}</code></p>
+</div>
+
+{% if databases %}
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Naam</th>
+        <th>Slug</th>
+        <th>Username</th>
+        <th>Tabellen</th>
+        <th>Aangemaakt</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for db in databases %}
+      <tr>
+        <td><strong>{{ db.name }}</strong></td>
+        <td><code>{{ db.slug }}</code></td>
+        <td><code>{{ db.username }}</code></td>
+        <td><span class="badge">{{ db.table_count }}</span></td>
+        <td class="muted">{{ db.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td><a href="{{ base_path }}/databases/{{ db.id }}" class="btn btn-sm btn-ghost">Beheren →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">◫</div>
+  <p>Nog geen databases. Maak je eerste database aan.</p>
+  <a href="{{ base_path }}/databases/new" class="btn btn-primary">Nieuwe database</a>
+</div>
+{% endif %}
+{% endblock %}
