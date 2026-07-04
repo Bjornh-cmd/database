@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Nieuwe database — DB Admin{% endblock %}
+{% set active = 'new_db' %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Nieuwe database</h1>
+    <p class="muted">Maak een tenant database met eigen API credentials op poort 5505</p>
+  </div>
+</div>
+
+<form id="create-db-form" class="form-card">
+  <label>
+    Naam
+    <input type="text" name="name" required placeholder="Shop Database">
+  </label>
+  <label>
+    Slug
+    <input type="text" name="slug" required pattern="[a-z0-9][a-z0-9_-]{0,62}" placeholder="shop">
+    <span class="hint">Kleine letters, cijfers, streepjes. Uniek per database.</span>
+  </label>
+  <label>
+    Client username
+    <input type="text" name="username" required pattern="[a-zA-Z_][a-zA-Z0-9_]{0,63}" placeholder="shop_user">
+    <span class="hint">Unieke username voor API URL: /api/&lt;username&gt;/&lt;password&gt;/</span>
+  </label>
+  <label>
+    Client wachtwoord
+    <input type="password" name="password" required minlength="4" placeholder="••••••••">
+  </label>
+  <p id="form-error" class="error hidden"></p>
+  <div class="form-actions">
+    <a href="{{ base_path }}/" class="btn btn-ghost">Annuleren</a>
+    <button type="submit" class="btn btn-primary">Aanmaken</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+const dbBase = window.DB_BASE || '/db';
+document.getElementById('create-db-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const errorEl = document.getElementById('form-error');
+  errorEl.classList.add('hidden');
+  const body = {
+    name: form.name.value,
+    slug: form.slug.value.toLowerCase(),
+    username: form.username.value,
+    password: form.password.value,
+  };
+  const res = await fetch(`${dbBase}/api/databases`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.ok) {
+    const data = await res.json();
+    window.location.href = `${dbBase}/databases/${data.id}`;
+  } else {
+    const err = await res.json();
+    errorEl.textContent = err.detail || 'Kon database niet aanmaken';
+    errorEl.classList.remove('hidden');
+  }
+});
+</script>
+{% endblock %}

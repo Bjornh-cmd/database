@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Inloggen — DB Admin{% endblock %}
+{% block bare_content %}
+<div class="auth-page">
+  <div class="auth-glow"></div>
+  <div class="auth-card">
+    <div class="auth-logo">◆</div>
+    <h1>Welkom terug</h1>
+    <p class="muted">Log in om databases en tabellen te beheren</p>
+    <form id="login-form">
+      <label>
+        Gebruikersnaam
+        <input type="text" name="username" required autofocus placeholder="admin">
+      </label>
+      <label>
+        Wachtwoord
+        <input type="password" name="password" required placeholder="••••••••">
+      </label>
+      <p id="login-error" class="error hidden"></p>
+      <button type="submit" class="btn btn-primary btn-block">Inloggen</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const errorEl = document.getElementById('login-error');
+  errorEl.classList.add('hidden');
+  const res = await fetch(`${window.DB_BASE || '/db'}/api/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: form.username.value,
+      password: form.password.value,
+    }),
+  });
+  if (res.ok) {
+    window.location.href = `${window.DB_BASE || '/db'}/`;
+  } else {
+    errorEl.textContent = 'Ongeldige inloggegevens';
+    errorEl.classList.remove('hidden');
+  }
+});
+</script>
+{% endblock %}
